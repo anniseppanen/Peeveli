@@ -92,12 +92,6 @@ class GameState(val missesAllowed: Int, val previousGuesses: String, val visible
       if wasHit then reveal(toPattern(newIndexes, actualGuess))
       else visibleWord
 
-    println(s"Guess: $guess")
-    println(s"Previous Guesses: $newPreviousGuesses")
-    println(s"Was Hit: $wasHit")
-    println(s"Misses Allowed: $newMissesAllowed")
-    println(s"Visible Word: $newVisibleWord")
-    println(s"Viable Solutions: ${newSolutions.mkString(", ")}")
     GameState(newMissesAllowed, newPreviousGuesses, newVisibleWord, newSolutions)
 
   private def newViableSolutions(guess: Char): (Vector[Int], Vector[String]) =
