@@ -46,19 +46,25 @@ class GameState(val missesAllowed: Int, val previousGuesses: String, val visible
 
   /** Returns `true` if the player has missed with more guesses than allowed and has therefore
     * lost the game; returns `false` otherwise. */
-  def isLost = false  // TODO: replace with a proper implementation
+  def isLost = missesAllowed < 0
 
   /** Returns `true` if the guesser has won the game, that is, if they haven’t missed too many
     * times and all the letters in the target word are visible. Returns `false` otherwise. */
-  def isWon = false  // TODO: replace with a proper implementation
+  def isWon = !isLost && !visibleWord.contains('_')
 
 
   /** Returns a version of the currently visible target word so that additional characters are
     * revealed as indicated by the given pattern. For example, if `visibleWord` is `"C___O"`
     * and the pattern is `"__LL_"`, returns `"C_LLO"`. This method assumes that it receives
     * a parameter of equal length as the target word. */
-  private def reveal(patternToReveal: String) = this.visibleWord  // TODO: replace with a proper implementation and use this to implement guessLetter
-
+  private def reveal(patternToReveal: String) =
+    var newVisibleWord = ""
+    for (char, index) <- patternToReveal.zipWithIndex do
+      if char == '_' then
+        newVisibleWord += visibleWord(index)
+      else
+        newVisibleWord += char
+    newVisibleWord
 
   /** Returns a new `GameState` that follows this current one given that the guesser guesses a
     * particular letter. The rationale behind moving from one state to another is described in
@@ -75,12 +81,43 @@ class GameState(val missesAllowed: Int, val previousGuesses: String, val visible
     * @return the state of the game after the newest guess */
   def guessLetter(guess: Char) =
     val actualGuess = guess.toUpper
-    // TODO: remove the incorrect code below and write a proper implementation for the method
-    val solution = this.viableSolutions.head
-    val howMany = this.previousGuesses.length + 1
-    val oneMoreRevealed = solution.take(howMany) + this.visibleWord.drop(howMany)
-    GameState(this.missesAllowed, this.previousGuesses + actualGuess, oneMoreRevealed, Vector(solution))
+    val alreadyGuessed = previousGuesses.contains(actualGuess)
+    val newPreviousGuesses = previousGuesses + actualGuess
+    val (newIndexes, newSolutions) = newViableSolutions(actualGuess)
+    val wasHit = newIndexes.exists(_ >= 0)
+    val newMissesAllowed =
+      if wasHit then missesAllowed
+      else missesAllowed - 1
+    val newVisibleWord =
+      if wasHit then reveal(toPattern(newIndexes, actualGuess))
+      else visibleWord
 
+    println(s"Guess: $guess")
+    println(s"Previous Guesses: $newPreviousGuesses")
+    println(s"Was Hit: $wasHit")
+    println(s"Misses Allowed: $newMissesAllowed")
+    println(s"Visible Word: $newVisibleWord")
+    println(s"Viable Solutions: ${newSolutions.mkString(", ")}")
+    GameState(newMissesAllowed, newPreviousGuesses, newVisibleWord, newSolutions)
+
+  private def newViableSolutions(guess: Char): (Vector[Int], Vector[String]) =
+    var groups = Map[Vector[Int], Vector[String]]()
+    for word <- viableSolutions do
+      var charIndexes = Vector[Int]()
+      for (char, index) <- word.zipWithIndex do
+        if char == guess then charIndexes = charIndexes :+ index
+      if charIndexes.isEmpty then
+        charIndexes = Vector(-1)
+      if !groups.contains(charIndexes) then
+        groups += charIndexes -> Vector(word)
+      else
+        groups = groups.updated(charIndexes, groups(charIndexes) :+ word)
+    groups.maxBy((indexes, words) => words.length)
+
+  private def toPattern(indexes: Vector[Int], guess: Char) =
+    visibleWord.indices.map(i =>
+      if indexes.contains(i) then guess
+      else '_').mkString
 
   /** Returns a string description of the game state. */
   override def toString =
